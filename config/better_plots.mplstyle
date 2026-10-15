@@ -1,0 +1,22 @@
+figure.figsize: 11, 8
+figure.facecolor: "#FCFCFC"
+axes.facecolor: "#FCFCFC"
+
+axes.labelsize: 14
+axes.titlesize: 14
+xtick.labelsize: 12
+ytick.labelsize: 14
+lines.linewidth: 1
+grid.linestyle: -
+grid.linewidth: 0.75
+
+font.family: Courier New
+font.weight: normal
+
+ytick.minor.visible: true
+xtick.minor.visible: true
+
+axes.labelweight: semibold
+axes.titleweight: bold
+xtick.labelweight: bold
+ytick.labelweight: bold
