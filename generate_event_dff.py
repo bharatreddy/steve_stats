@@ -139,7 +139,7 @@ def parse_args() -> argparse.Namespace:
         "--cache-workers",
         type=int,
         default=min(8, os.cpu_count() or 1),
-        help="threads used while converting raw fitacf3 records (default: up to 8)",
+        help="threads used while converting raw fitacf/fitacf3 records (default: up to 8)",
     )
     parser.add_argument(
         "--config",
@@ -187,29 +187,49 @@ def full_day_times(event_date: dt.date, cadence: str) -> pd.DatetimeIndex:
     return pd.date_range(start, end, freq=step, inclusive="left")
 
 
-def northern_radars(day_dir: Path) -> list[str]:
+def available_fitacf_filetype(day_dir: Path) -> str | None:
+    """Prefer fitacf3 when present; otherwise use legacy fitacf files."""
+    for filetype in ("fitacf3", "fitacf"):
+        if any(
+            entry.is_dir() and any(entry.glob(f"*.{filetype}.bz2"))
+            for entry in day_dir.iterdir()
+        ):
+            return filetype
+    return None
+
+
+def northern_radars(day_dir: Path, filetype: str) -> list[str]:
     radars = sorted(
         entry.name.lower()
         for entry in day_dir.iterdir()
         if entry.is_dir()
         and entry.name.lower() not in SOUTHERN_RADARS
-        and any(entry.glob("*.fitacf3.bz2"))
+        and any(entry.glob(f"*.{filetype}.bz2"))
     )
     if not radars:
-        raise FileNotFoundError(f"No northern fitacf3 radar folders found in {day_dir}")
+        raise FileNotFoundError(
+            f"No northern {filetype} radar folders found in {day_dir}"
+        )
     return radars
 
 
-def validate_event_inputs(data_root: Path, event_date: dt.date) -> tuple[list[str], Path]:
+def validate_event_inputs(
+    data_root: Path, event_date: dt.date
+) -> tuple[list[str], Path, str]:
     day = event_date.strftime("%Y%m%d")
     day_dir = data_root / day
     if not day_dir.is_dir():
         raise FileNotFoundError(f"Missing event data directory: {day_dir}")
-    radars = northern_radars(day_dir)
+    filetype = available_fitacf_filetype(day_dir)
+    if filetype is None:
+        raise FileNotFoundError(
+            f"No fitacf3 or fitacf radar files found in {day_dir}"
+        )
+    radars = northern_radars(day_dir, filetype)
     map2_file = day_dir / f"{day}.north.map2.bz2"
     if not map2_file.is_file():
         raise FileNotFoundError(f"Missing northern MAP2 file: {map2_file}")
-    return radars, map2_file
+    return radars, map2_file, filetype
 
 
 @contextmanager
@@ -224,12 +244,16 @@ def archive_view(
             day = event_date.strftime("%Y%m%d")
             year = event_date.strftime("%Y")
             day_dir = data_root / day
-            radars, map2_file = validate_event_inputs(data_root, event_date)
+            radars, map2_file, filetype = validate_event_inputs(
+                data_root, event_date
+            )
 
             for radar in radars:
-                target_dir = archive_root / year / "fitacf3" / radar
+                target_dir = archive_root / year / filetype / radar
                 target_dir.mkdir(parents=True, exist_ok=True)
-                for source in sorted((day_dir / radar).glob(f"{day}.*.fitacf3.bz2")):
+                for source in sorted(
+                    (day_dir / radar).glob(f"{day}.*.{filetype}.bz2")
+                ):
                     target = target_dir / source.name
                     if not target.exists():
                         target.symlink_to(source.resolve())
@@ -272,6 +296,7 @@ def use_local_map2(archive_root: Path):
 def build_fitacf_cache(
     event_date: dt.date,
     radars: list[str],
+    filetype: str,
     archive_root: Path,
     cache_root: Path,
     workers: int,
@@ -300,6 +325,7 @@ def build_fitacf_cache(
             hemisphere="North",
             outdata_dir=str(cache_root),
             sd_data_base_dir=str(archive_root),
+            filetype=filetype,
             skip_if_file_not_found=False,
         )
     finally:
@@ -445,7 +471,9 @@ def main() -> int:
     input_failures: dict[str, list[dict[str, str]]] = {}
     for event_date, names in grouped_events.items():
         try:
-            radars, map2_file = validate_event_inputs(data_root, event_date)
+            radars, map2_file, filetype = validate_event_inputs(
+                data_root, event_date
+            )
         except FileNotFoundError as error:
             print(f"{event_date:%Y%m%d}: unavailable: {error}", file=sys.stderr)
             input_failures[event_date.strftime("%Y%m%d")] = [
@@ -457,23 +485,28 @@ def main() -> int:
         runnable_events[event_date] = names
         print(
             f"{event_date:%Y%m%d} ({', '.join(names)}): "
-            f"{len(radars)} northern radar(s), MAP2={map2_file.name}"
+            f"{len(radars)} northern radar(s), data={filetype}, "
+            f"MAP2={map2_file.name}"
         )
 
     if args.dry_run:
         return 1 if input_failures else 0
     if not runnable_events:
-        print("No event dates have complete fitacf3 and MAP2 inputs.", file=sys.stderr)
+        print(
+            "No event dates have complete fitacf/fitacf3 and MAP2 inputs.",
+            file=sys.stderr,
+        )
         return 2
 
     all_failures = dict(input_failures)
     with archive_view(data_root, runnable_events) as archive_root:
         with use_local_map2(archive_root):
             for event_date, names in runnable_events.items():
-                radars, _ = validate_event_inputs(data_root, event_date)
+                radars, _, filetype = validate_event_inputs(data_root, event_date)
                 build_fitacf_cache(
                     event_date,
                     radars,
+                    filetype,
                     archive_root,
                     cache_root,
                     args.cache_workers,

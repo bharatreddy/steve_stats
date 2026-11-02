@@ -1,0 +1,136 @@
+{
+  "20110402": [
+    {
+      "fit_time": "2011-04-02T00:00:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2011-04-02 00:00:00."
+    },
+    {
+      "fit_time": "2011-04-02T23:58:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2011-04-02 23:58:00."
+    },
+    {
+      "fit_time": "2011-04-02T23:59:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2011-04-02 23:59:00."
+    }
+  ],
+  "20150907": [
+    {
+      "fit_time": "2015-09-07T00:00:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2015-09-07 00:00:00."
+    },
+    {
+      "fit_time": "2015-09-07T23:58:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2015-09-07 23:58:00."
+    },
+    {
+      "fit_time": "2015-09-07T23:59:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2015-09-07 23:59:00."
+    }
+  ],
+  "20150911": [
+    {
+      "fit_time": "2015-09-11T00:00:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2015-09-11 00:00:00."
+    },
+    {
+      "fit_time": "2015-09-11T23:58:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2015-09-11 23:58:00."
+    },
+    {
+      "fit_time": "2015-09-11T23:59:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2015-09-11 23:59:00."
+    }
+  ],
+  "20150912": [
+    {
+      "fit_time": "2015-09-12T00:00:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2015-09-12 00:00:00."
+    },
+    {
+      "fit_time": "2015-09-12T23:58:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2015-09-12 23:58:00."
+    },
+    {
+      "fit_time": "2015-09-12T23:59:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2015-09-12 23:59:00."
+    }
+  ],
+  "20160725": [
+    {
+      "fit_time": "2016-07-25T00:00:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2016-07-25 00:00:00."
+    },
+    {
+      "fit_time": "2016-07-25T23:58:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2016-07-25 23:58:00."
+    },
+    {
+      "fit_time": "2016-07-25T23:59:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2016-07-25 23:59:00."
+    }
+  ],
+  "20170824": [
+    {
+      "fit_time": "2017-08-24T00:00:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2017-08-24 00:00:00."
+    },
+    {
+      "fit_time": "2017-08-24T23:58:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2017-08-24 23:58:00."
+    },
+    {
+      "fit_time": "2017-08-24T23:59:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2017-08-24 23:59:00."
+    }
+  ],
+  "20180717": [
+    {
+      "fit_time": "2018-07-17T00:00:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2018-07-17 00:00:00."
+    },
+    {
+      "fit_time": "2018-07-17T23:58:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2018-07-17 23:58:00."
+    },
+    {
+      "fit_time": "2018-07-17T23:59:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2018-07-17 23:59:00."
+    }
+  ],
+  "20190710": [
+    {
+      "fit_time": "2019-07-10T00:00:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2019-07-10 00:00:00."
+    },
+    {
+      "fit_time": "2019-07-10T23:56:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2019-07-10 23:56:00."
+    },
+    {
+      "fit_time": "2019-07-10T23:57:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2019-07-10 23:57:00."
+    },
+    {
+      "fit_time": "2019-07-10T23:58:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2019-07-10 23:58:00."
+    },
+    {
+      "fit_time": "2019-07-10T23:59:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2019-07-10 23:59:00."
+    }
+  ],
+  "20220410": [
+    {
+      "fit_time": "2022-04-10T00:00:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2022-04-10 00:00:00."
+    },
+    {
+      "fit_time": "2022-04-10T23:58:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2022-04-10 23:58:00."
+    },
+    {
+      "fit_time": "2022-04-10T23:59:00",
+      "error": "No matching map2 fit record was found within 1 minute of 2022-04-10 23:59:00."
+    }
+  ]
+}

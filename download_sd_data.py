@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download SuperDARN fitacf3 and map2 data for dates in event_list.py.
+"""Download SuperDARN fitacf/fitacf3 and map2 data for event dates.
 
 Authentication is handled by OpenSSH's ``sftp`` command.  If public-key
 authentication is not configured, OpenSSH securely prompts for the account
@@ -47,8 +47,8 @@ def parse_args() -> argparse.Namespace:
     events = selected_events()
     parser = argparse.ArgumentParser(
         description=(
-            "Download full-day fitacf3 files from all radars and the northern "
-            "map2 file for dates defined in event_list.py."
+            "Download full-day fitacf3 files when available, otherwise fitacf "
+            "files, plus the northern map2 file for dates in event_list.py."
         )
     )
     parser.add_argument(
@@ -94,8 +94,9 @@ def print_dry_run(dates: Iterable[dt.date], output_dir: Path) -> None:
         day = event_date.strftime("%Y%m%d")
         date_dir = (output_dir / day).resolve()
         print(
-            f"List /sd-data/{year}/fitacf3, inspect every radar for "
-            f"{day}.*.fitacf3.bz2, and download exact filenames to {date_dir}"
+            f"Inspect /sd-data/{year}/fitacf3 for {day}.*.fitacf3.bz2; "
+            f"if none exist, fall back to /sd-data/{year}/fitacf for "
+            f"{day}.*.fitacf.bz2. Download matching files to {date_dir}"
         )
         if not (date_dir / f"{day}.north.map2.bz2").is_file():
             print(
@@ -104,8 +105,10 @@ def print_dry_run(dates: Iterable[dt.date], output_dir: Path) -> None:
             )
 
 
-def radar_from_filename(filename: str, day: str) -> str | None:
-    """Return the radar field from a standard fitacf3 filename."""
+def radar_from_filename(
+    filename: str, day: str, product: str = "fitacf3"
+) -> str | None:
+    """Return the radar field from a standard fitacf/fitacf3 filename."""
     # Both forms exist in the archive:
     # yyyymmdd.hhmm.VALUE.RADAR.fitacf3.bz2
     # yyyymmdd.hhmm.VALUE.RADAR.CHANNEL.fitacf3.bz2
@@ -113,7 +116,7 @@ def radar_from_filename(filename: str, day: str) -> str | None:
     if (
         len(parts) in (6, 7)
         and parts[0] == day
-        and parts[-2:] == ["fitacf3", "bz2"]
+        and parts[-2:] == [product, "bz2"]
         and RADAR_NAME.fullmatch(parts[3])
     ):
         return parts[3]
@@ -262,10 +265,16 @@ def listing_lines(output: str) -> list[str]:
     ]
 
 
-def list_radars(child, year: str) -> list[str]:
-    remote_dir = f"/sd-data/{year}/fitacf3"
+def list_radars(child, year: str, product: str = "fitacf3") -> list[str]:
+    remote_dir = f"/sd-data/{year}/{product}"
     cd_output = run_sftp_command(child, f"cd {remote_dir}")
-    if "couldn't" in cd_output.lower() or "not found" in cd_output.lower():
+    cd_message = cd_output.lower()
+    if any(
+        marker in cd_message
+        for marker in ("couldn't", "not found", "no such file", "doesn't exist")
+    ):
+        return []
+    if "permission denied" in cd_message:
         raise SFTPError(f"Could not open {remote_dir}.\n{cd_output.strip()}")
 
     # Listing the current directory avoids SFTP returning the directory path
@@ -277,18 +286,20 @@ def list_radars(child, year: str) -> list[str]:
         for line in listing_lines(output)
         for token in line.split()
         if RADAR_NAME.fullmatch(token.rstrip("/").rsplit("/", 1)[-1])
-        and token.rstrip("/").rsplit("/", 1)[-1] != "fitacf3"
+        and token.rstrip("/").rsplit("/", 1)[-1] != product
     }
     if not radars:
-        raise SFTPError(f"No radar directories were found in {remote_dir}.\n{output.strip()}")
+        return []
     return sorted(radars)
 
 
-def list_fitacf_files(child, year: str, radar: str, day: str) -> list[str]:
-    radar_dir = f"/sd-data/{year}/fitacf3/{radar}"
+def list_fitacf_files(
+    child, year: str, radar: str, day: str, product: str = "fitacf3"
+) -> list[str]:
+    radar_dir = f"/sd-data/{year}/{product}/{radar}"
     # This unquoted wildcard is used only for listing within one known radar.
     output = run_sftp_command(
-        child, f"ls -1 {radar_dir}/{day}.*.fitacf3.bz2"
+        child, f"ls -1 {radar_dir}/{day}.*.{product}.bz2"
     )
     matches: list[str] = []
     for line in listing_lines(output):
@@ -298,7 +309,7 @@ def list_fitacf_files(child, year: str, radar: str, day: str) -> list[str]:
         filename = remote_file.rsplit("/", 1)[-1]
         if (
             filename.startswith(f"{day}.")
-            and filename.endswith(".fitacf3.bz2")
+            and filename.endswith(f".{product}.bz2")
             and " " not in filename
         ):
             matches.append(remote_file)
@@ -320,8 +331,8 @@ def download_exact_file(child, remote_file: str, local_file: Path) -> None:
 
 
 def download_all(child, dates: Iterable[dt.date], output_dir: Path) -> int:
-    """Enumerate radar directories and download every matching fitacf3 file."""
-    radar_cache: dict[str, list[str]] = {}
+    """Prefer fitacf3 per date, falling back to fitacf when none is available."""
+    radar_cache: dict[tuple[str, str], list[str]] = {}
     downloaded = 0
 
     for event_date in dates:
@@ -330,27 +341,42 @@ def download_all(child, dates: Iterable[dt.date], output_dir: Path) -> int:
         date_dir = output_dir / day
         date_dir.mkdir(parents=True, exist_ok=True)
 
-        if year not in radar_cache:
-            radar_cache[year] = list_radars(child, year)
-            print(
-                f"{year}: found {len(radar_cache[year])} radar directories: "
-                + ", ".join(radar_cache[year])
-            )
-
         date_matches = 0
-        for radar in radar_cache[year]:
-            remote_files = list_fitacf_files(child, year, radar, day)
-            if not remote_files:
-                continue
-            print(f"{day} {radar}: downloading {len(remote_files)} file(s).")
-            for remote_file in remote_files:
-                local_file = date_dir / radar / remote_file.rsplit("/", 1)[-1]
-                download_exact_file(child, remote_file, local_file)
-                downloaded += 1
-                date_matches += 1
+        selected_product = "fitacf3"
+        for product in ("fitacf3", "fitacf"):
+            if product == "fitacf" and date_matches:
+                break
+
+            cache_key = (year, product)
+            if cache_key not in radar_cache:
+                radar_cache[cache_key] = list_radars(child, year, product)
+                if radar_cache[cache_key]:
+                    print(
+                        f"{year} {product}: found "
+                        f"{len(radar_cache[cache_key])} radar directories: "
+                        + ", ".join(radar_cache[cache_key])
+                    )
+
+            for radar in radar_cache[cache_key]:
+                remote_files = list_fitacf_files(child, year, radar, day, product)
+                if not remote_files:
+                    continue
+                print(
+                    f"{day} {radar} ({product}): "
+                    f"downloading {len(remote_files)} file(s)."
+                )
+                for remote_file in remote_files:
+                    local_file = date_dir / radar / remote_file.rsplit("/", 1)[-1]
+                    download_exact_file(child, remote_file, local_file)
+                    downloaded += 1
+                    date_matches += 1
+            if date_matches:
+                selected_product = product
 
         if date_matches == 0:
-            print(f"Warning: no fitacf3 files found for {day}.", file=sys.stderr)
+            print(f"Warning: no fitacf3 or fitacf files found for {day}.", file=sys.stderr)
+        elif selected_product == "fitacf":
+            print(f"{day}: no fitacf3 files found; used legacy fitacf files.")
 
         map2_name = f"{day}.north.map2.bz2"
         map2_local = date_dir / map2_name
@@ -367,10 +393,14 @@ def validate_downloads(dates: Iterable[dt.date], output_dir: Path) -> list[str]:
     for event_date in dates:
         day = event_date.strftime("%Y%m%d")
         date_dir = output_dir / day
-        fitacf_files = list(date_dir.glob(f"*/{day}.*.fitacf3.bz2"))
+        fitacf_files = [
+            path
+            for product in ("fitacf3", "fitacf")
+            for path in date_dir.glob(f"*/{day}.*.{product}.bz2")
+        ]
         map2_file = date_dir / f"{day}.north.map2.bz2"
         if not fitacf_files:
-            missing.append(f"fitacf3 files for {day}")
+            missing.append(f"fitacf3 or fitacf files for {day}")
         if not map2_file.is_file():
             missing.append(f"map2 file for {day}")
     return missing
@@ -446,7 +476,10 @@ def main() -> int:
         )
         return 1
 
-    print(f"Download complete. Retrieved or resumed {downloaded} fitacf3 file(s).")
+    print(
+        f"Download complete. Retrieved or resumed {downloaded} "
+        "fitacf/fitacf3 file(s)."
+    )
     return 0
 
 
