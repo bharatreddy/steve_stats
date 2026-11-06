@@ -1,0 +1,76 @@
+{
+  "paths": {
+    "data_base_dir": "data",
+    "sd_data_base_dir": "/sd-data",
+    "output_dir": "outputs",
+    "figure_dir": "plots"
+  },
+  "fitting": {
+    "backend": "spherical_los_map",
+    "nu": 5,
+    "k": 3,
+    "dim": 2,
+    "fitting_parameter": 25.0,
+    "coordinate_system": "magnetic_polar",
+    "condition_method": "lstsq",
+    "spherical": {
+      "kernel": "inverse_quadratic",
+      "angular_scale_degrees": 7.0,
+      "regularization": 1e-5,
+      "max_centers": null,
+      "center_strategy": "all",
+      "random_state": 0
+    },
+    "los_map_prior": {
+      "map_prior_strength": 0.2,
+      "merge_vector_strength": 1.01,
+      "los_velocity_column": "vel",
+      "los_azimuth_column": "mag_azm_los",
+      "los_weight_column": null,
+      "map_weight_column": null,
+      "map_velocity_limit": 3000.0,
+      "map_grid": {
+        "lat_grid_start": 50.0,
+        "lat_grid_end": 89.5,
+        "lat_grid_step": 18,
+        "mlt_grid_start": 0.0,
+        "mlt_grid_end": 23.0,
+        "mlt_grid_step": 24
+      }
+    }
+  },
+  "pipeline": {
+    "skip_if_file_not_found": true,
+    "clean_fit_data": true,
+    "los_speed_limit": [30.0, 3000.0],
+    "range_limit": [500.0, 3000.0],
+    "remove_edge_beams": null,
+    "use_lof": true,
+    "lof_keep_fraction": 0.7,
+    "lof_n_neighbors": 20,
+    "lof_contamination": 0.1,
+    "lof_feature_columns": ["mlats", "mlt", "vel"],
+    "use_scan_boundaries": true,
+    "select_single_channel": true,
+    "merge_scan_channels": false,
+    "preferred_scan_channel": null,
+    "max_scan_interval_minutes": 2.0,
+    "deduplicate_scan_vectors": true,
+    "add_map_grid": false,
+    "use_merge_vectors": false
+  },
+  "plot": {
+    "mlt_limits": [18.0, 24.0],
+    "mlat_limits": [50.0, 90.0],
+    "los_colormap": "managua",
+    "fitted_colormap": "lajolla",
+    "los_color_limit": 600.0,
+    "fitted_color_limit": 800.0,
+    "quiver_scale": 15000.0,
+    "plot_every": 1,
+    "save_figures": true
+  },
+  "output": {
+    "save_vectors": true
+  }
+}
